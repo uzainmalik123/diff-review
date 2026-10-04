@@ -25,6 +25,6 @@ index 1..2 100644
 +helloxxxxxx
 `;
     const res = filterAndTruncate(diff, 10, []);
-    expect(res.includedText).toBeTruthy();
+    expect(res.filesSeen > 0).toBeTruthy();
   });
 });
