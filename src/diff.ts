@@ -125,12 +125,19 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
   let chars = 0;
   for (const sec of filtered) {
     const secStr = sec;
-    const sep = included.length > 0 ? 1 : 0;
-    if (chars + secStr.length + sep <= maxChars) {
+    const sepLen = included.length > 0 ? 1 : 0;
+    const total = chars + secStr.length + sepLen;
+    if (total <= maxChars) {
       included.push(secStr);
-      chars += secStr.length + sep;
+      chars += secStr.length + sepLen;
     } else {
       truncated = true;
+      // try to fit partial if there's space
+      const remaining = maxChars - chars - sepLen;
+      if (remaining > 10 && secStr.length > remaining) {
+        included.push(secStr.substring(0, remaining));
+        chars += remaining;
+      }
       break;
     }
   }
