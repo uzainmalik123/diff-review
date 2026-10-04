@@ -4,10 +4,12 @@ import { runChecks } from '../src/checks.js';
 describe('checks', () => {
   it('detects console.log', () => {
     const diff = `diff --git a/src/a.ts b/src/a.ts
---- a/src/a.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
 +++ b/src/a.ts
-@@ -1,1 +1,1 @@
--console.log('hi')
+@@ -0,0 +1,1 @@
++console.log('hi')
 `;
     const res = runChecks(diff);
     expect(res.some((r) => r.issue.includes('debug'))).toBe(true);
