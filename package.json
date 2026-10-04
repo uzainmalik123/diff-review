@@ -1,0 +1,30 @@
+{
+  "name": "diff-review",
+  "version": "0.1.0",
+  "description": "Local diff review CLI with open-weight model",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "diff-review": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
