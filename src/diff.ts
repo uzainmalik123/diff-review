@@ -34,7 +34,6 @@ function shouldExcludePath(filename: string, ignoreGlobs: string[]): boolean {
   for (const dir of BUILD_DIRS) {
     if (filename.startsWith(dir + '/') || filename === dir) return true;
   }
-  // simple glob match for ignore globs (basic * handling)
   for (const g of ignoreGlobs) {
     if (g.includes('*')) {
       const regex = new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
@@ -78,9 +77,6 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
   const lines = diff.split('\n');
   const sections: string[] = [];
   let current: string[] = [];
-  let filename: string | null = null;
-  let filesSeen = 0;
-  let totalChangedLines = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -89,19 +85,8 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
         sections.push(current.join('\n'));
         current = [];
       }
-      filename = null;
-      current.push(line);
-    } else if ((line.startsWith('+++') || line.startsWith('---')) && current.length > 0) {
-      // extract filename from +++
-      if (line.startsWith('+++')) {
-        const m = line.match(/^\+\+\+ b\/(.+)$/);
-        if (m) filename = m[1];
-      }
       current.push(line);
     } else {
-      if (line.startsWith('Binary files ')) {
-        // mark this section to be skipped if we know filename context? we'll handle after
-      }
       current.push(line);
     }
   }
@@ -110,6 +95,7 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
   }
 
   const filtered: string[] = [];
+  let totalChangedLines = 0;
   for (const sec of sections) {
     const secLines = sec.split('\n');
     let secFilename: string | null = null;
@@ -129,30 +115,26 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
     }
     totalChangedLines += countChangedLines(sec);
     filtered.push(sec);
-    filesSeen++;
   }
-
-  // better count filesSeen from original? just count non-excluded sections
-  filesSeen = filtered.length;
 
   let included: string[] = [];
   let truncated = false;
   let chars = 0;
   for (const sec of filtered) {
-    const secLen = sec.length + (included.length > 0 ? 1 : 0); // +\n
-    if (chars + secLen <= maxChars) {
+    const secLen = sec.length;
+    const sep = included.length > 0 ? 1 : 0; // \n
+    if (chars + secLen + sep <= maxChars) {
       included.push(sec);
-      chars += secLen;
+      chars += secLen + sep;
     } else {
       truncated = true;
-      // try to fit partial? but must keep whole sections; cut last section at boundary if needed
-      const remaining = maxChars - chars;
-      if (remaining > 50) {
-        // include partial from end - split by lines and add until would exceed
-        const lines = sec.split('\n');
+      const remaining = maxChars - chars - sep;
+      if (remaining > 30) {
+        const secLinesArr = sec.split('\n');
         const partial: string[] = [];
-        for (const l of lines) {
-          if ((partial.join('\n') + '\n' + l).length <= remaining) {
+        for (const l of secLinesArr) {
+          const pLen = partial.length === 0 ? 0 : 1;
+          if ((partial.join('\n') + (pLen ? '\n' : '') + l).length <= remaining) {
             partial.push(l);
           } else {
             break;

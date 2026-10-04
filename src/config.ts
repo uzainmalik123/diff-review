@@ -54,7 +54,7 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     if (parsed.provider && parsed.provider !== 'ollama' && parsed.provider !== 'openrouter') {
       throw new Error('Invalid provider');
     }
-    if (parsed.openrouterApiKey || parsed.apiKey) {
+    if ('openrouterApiKey' in parsed || 'apiKey' in parsed) {
       throw new Error('API key must not be in config file; use OPENROUTER_API_KEY env var');
     }
     cfg = { ...cfg, ...parsed };
@@ -65,9 +65,6 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
   }
   if (cfg.provider === 'openrouter' && !cfg.model) {
     throw new Error('model is required for openrouter');
-  }
-  if (cfg.provider === 'openrouter' && !cfg.openrouterApiKey) {
-    // may be missing; validation happens at runtime
   }
   return cfg;
 }
