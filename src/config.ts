@@ -45,6 +45,11 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
   if (fs.existsSync(configPath)) {
     const text = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') {
+      if ('openrouterApiKey' in parsed || 'apiKey' in parsed) {
+        throw new Error('API key must not be in config file; use OPENROUTER_API_KEY env var');
+      }
+    }
     const allowed = new Set(['provider', 'model', 'ollamaHost', 'maxChars', 'timeoutMs', 'strict', 'ignore']);
     for (const k of Object.keys(parsed)) {
       if (!allowed.has(k)) {
@@ -53,9 +58,6 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     }
     if (parsed.provider && parsed.provider !== 'ollama' && parsed.provider !== 'openrouter') {
       throw new Error('Invalid provider');
-    }
-    if ('openrouterApiKey' in parsed || 'apiKey' in parsed) {
-      throw new Error('API key must not be in config file; use OPENROUTER_API_KEY env var');
     }
     cfg = { ...cfg, ...parsed };
   }
