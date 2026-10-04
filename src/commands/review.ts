@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { formatHeader, postProcess } from '../src/format.js';
-import { SYSTEM_PROMPT, buildUserMessage } from '../src/prompt.js';
-import { filterAndTruncate, getDiff } from '../src/diff.js';
-import { loadConfig, mergeFlags } from '../src/config.js';
-import { OllamaProvider } from '../src/providers/ollama.js';
-import { OpenRouterProvider } from '../src/providers/openrouter.js';
-import { hasCommits, hasStagedChanges, hasUpstream } from '../src/git.js';
-import { redactForOpenRouter } from '../src/redact.js';
+import { formatHeader, postProcess } from '../format.js';
+import { SYSTEM_PROMPT, buildUserMessage } from '../prompt.js';
+import { filterAndTruncate, getDiff } from '../diff.js';
+import { loadConfig, mergeFlags } from '../config.js';
+import { OllamaProvider } from '../providers/ollama.js';
+import { OpenRouterProvider } from '../providers/openrouter.js';
+import { hasCommits, hasStagedChanges, hasUpstream } from '../git.js';
+import { redactForOpenRouter } from '../redact.js';
+import { runChecks, formatChecks } from '../checks.js';
 
 function getBaseDesc(flags: any): string {
   if (flags['diff-file']) return 'diff-file';
@@ -71,6 +72,10 @@ export async function runReview(argv: string[]) {
     return;
   }
 
+  // run checks on included diff
+  const checksFindings = runChecks(stats.includedText);
+  const checksOutput = formatChecks(checksFindings);
+
   let toSend = stats.includedText;
   if (merged.provider === 'openrouter') {
     toSend = redactForOpenRouter(toSend);
@@ -91,10 +96,22 @@ export async function runReview(argv: string[]) {
   } catch (err: any) {
     const reason = err.message || String(err);
     process.stderr.write(`diff-review: review skipped (${reason})\n`);
+    if (checksOutput) {
+      process.stdout.write(checksOutput + '\n');
+    }
     process.exit(0);
   }
 
-  const processed = postProcess(result);
+  let processed = postProcess(result);
+  // apply rule: if model output is empty, unformatted (meaning non-bullet/non-no-issues), or just repeats prompt context - drop it
+  if (!processed || processed === SYSTEM_PROMPT || processed.startsWith('(unformatted)')) {
+    processed = 'No issues found.';
+  }
+
+  let outParts: string[] = [];
+  if (checksOutput) {
+    outParts.push(checksOutput);
+  }
   const header = formatHeader({
     model: merged.model,
     provider: merged.provider,
@@ -102,12 +119,15 @@ export async function runReview(argv: string[]) {
     filesIncluded: stats.filesIncluded,
     filesSeen: stats.filesSeen,
   });
-  const out = [header, processed].filter(Boolean).join('\n');
+  outParts.push(header);
+  outParts.push(processed);
+  const out = outParts.join('\n');
   console.log(out);
   if (stats.truncated) {
     console.log(`note: diff truncated to ${merged.maxChars} characters, some file(s) not reviewed`);
   }
-  if (merged.strict && processed !== 'No issues found.') {
+  const totalFindings = checksFindings.length + (processed !== 'No issues found.' ? 1 : 0);
+  if (merged.strict && totalFindings > 0) {
     process.exit(1);
   }
 }
