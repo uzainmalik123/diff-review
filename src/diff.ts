@@ -74,6 +74,9 @@ function countChangedLines(section: string): number {
 }
 
 export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: string[]): DiffStats {
+  if (!diff.trim()) {
+    return { filesSeen: 0, filesIncluded: 0, truncated: false, totalChangedLines: 0, includedText: '' };
+  }
   const lines = diff.split('\n');
   const sections: string[] = [];
   let current: string[] = [];
@@ -121,29 +124,13 @@ export function filterAndTruncate(diff: string, maxChars: number, ignoreGlobs: s
   let truncated = false;
   let chars = 0;
   for (const sec of filtered) {
-    const secLen = sec.length;
-    const sep = included.length > 0 ? 1 : 0; // \n
-    if (chars + secLen + sep <= maxChars) {
-      included.push(sec);
-      chars += secLen + sep;
+    const secStr = sec;
+    const sep = included.length > 0 ? 1 : 0;
+    if (chars + secStr.length + sep <= maxChars) {
+      included.push(secStr);
+      chars += secStr.length + sep;
     } else {
       truncated = true;
-      const remaining = maxChars - chars - sep;
-      if (remaining > 30) {
-        const secLinesArr = sec.split('\n');
-        const partial: string[] = [];
-        for (const l of secLinesArr) {
-          const pLen = partial.length === 0 ? 0 : 1;
-          if ((partial.join('\n') + (pLen ? '\n' : '') + l).length <= remaining) {
-            partial.push(l);
-          } else {
-            break;
-          }
-        }
-        if (partial.length > 0) {
-          included.push(partial.join('\n'));
-        }
-      }
       break;
     }
   }
