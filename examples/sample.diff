@@ -1,0 +1,23 @@
+diff --git a/src/api.ts b/src/api.ts
+index abc123..def456 100644
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -1,10 +1,15 @@
+ export async function getUser(id: string) {
+-  const res = await fetch(`/api/users/${id}`);
+-  return res.json();
++  const res = await fetch(`/api/users/${id}`);
++  console.log('fetching', id);
++  return res.json();
+ }
+ 
+ export async function getPosts() {
+-  const res = await fetch('/api/posts');
+-  return res.json();
++  const res = await fetch('/api/posts');
++  if (!res.ok) {
++    throw new Error('Failed to fetch posts');
++  }
++  // TODO: add retry
++  return res.json();
+ }

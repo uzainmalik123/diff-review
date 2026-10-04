@@ -1,0 +1,7 @@
+{
+  "provider": "ollama",
+  "model": "gemma3:1b",
+  "maxChars": 6000,
+  "strict": false,
+  "ignore": []
+}
