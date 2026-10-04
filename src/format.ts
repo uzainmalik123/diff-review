@@ -39,7 +39,7 @@ export interface PrintOptions {
   filesSeen?: number;
   truncated?: boolean;
   maxChars?: number;
-  result: string;
+  result?: string;
   skipped?: boolean;
   skipReason?: string;
 }
@@ -52,6 +52,5 @@ export function formatHeader(opts: PrintOptions): string {
   if (typeof opts.filesIncluded === 'number' && typeof opts.filesSeen === 'number') {
     parts.push(`${opts.filesIncluded} of ${opts.filesSeen} files`);
   }
-  // total changed lines? optional, not specified - skip
   return parts.join(' · ');
 }
