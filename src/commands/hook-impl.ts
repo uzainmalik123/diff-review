@@ -7,6 +7,7 @@ import { OllamaProvider } from '../providers/ollama.js';
 import { OpenRouterProvider } from '../providers/openrouter.js';
 import { formatHeader, postProcess } from '../format.js';
 import { redactForOpenRouter } from '../redact.js';
+import { runChecks, formatChecks } from '../checks.js';
 
 export async function runHook(remoteName: string, remoteUrl: string) {
   if (process.env.DIFF_REVIEW_SKIP === '1') {
@@ -32,7 +33,6 @@ export async function runHook(remoteName: string, remoteUrl: string) {
     const remoteOid = parts[3];
     if (localOid.match(/^0+$/)) continue; // delete
     if (remoteOid.match(/^0+$/)) {
-      // new branch - try to find base
       try {
         const candidates = ['origin/HEAD', 'origin/main', 'origin/master'];
         let base: string | null = null;
@@ -75,6 +75,13 @@ export async function runHook(remoteName: string, remoteUrl: string) {
     const stats = filterAndTruncate(diffText, cfg.maxChars, cfg.ignore);
     if (stats.filesIncluded === 0) continue;
 
+    const checksFindings = runChecks(stats.includedText);
+    const checksOutput = formatChecks(checksFindings);
+    if (checksOutput) {
+      process.stderr.write(checksOutput + '\n');
+      foundIssues = true;
+    }
+
     let toSend = stats.includedText;
     if (cfg.provider === 'openrouter') {
       toSend = redactForOpenRouter(toSend);
@@ -99,7 +106,11 @@ export async function runHook(remoteName: string, remoteUrl: string) {
       continue;
     }
 
-    const processed = postProcess(result);
+    let processed = postProcess(result);
+    if (!processed || processed === SYSTEM_PROMPT || processed.startsWith('(unformatted)')) {
+      processed = 'No issues found.';
+    }
+
     const header = formatHeader({
       model: cfg.model,
       provider: cfg.provider,
