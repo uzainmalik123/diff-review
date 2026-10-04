@@ -25,6 +25,14 @@ async function main() {
     options: {
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean', short: 'v' },
+      force: { type: 'boolean' },
+      base: { type: 'string' },
+      staged: { type: 'boolean' },
+      'diff-file': { type: 'string' },
+      provider: { type: 'string' },
+      model: { type: 'string' },
+      'max-chars': { type: 'string' },
+      strict: { type: 'boolean' },
     },
     strict: false,
   });
@@ -44,18 +52,30 @@ async function main() {
     return;
   }
 
-  // For now, just show stub
   if (cmd === 'review') {
-    // will be implemented
+    const { runReview } = await import('./commands/review.js');
+    await runReview(process.argv.slice(2));
     return;
   }
   if (cmd === 'install') {
+    const { installHook } = await import('./commands/install.js');
+    const res = installHook(Boolean(values.force));
+    console.log(res.message);
+    if (!res.created) process.exit(1);
     return;
   }
   if (cmd === 'uninstall') {
+    const { uninstallHook } = await import('./commands/install.js');
+    const res = uninstallHook();
+    console.log(res.message);
+    if (!res.removed) process.exit(0); // be gentle
     return;
   }
   if (cmd === 'hook') {
+    const remoteName = positionals[1] || '';
+    const remoteUrl = positionals[2] || '';
+    const { runHook } = await import('./commands/hook-impl.js');
+    await runHook(remoteName, remoteUrl);
     return;
   }
 
