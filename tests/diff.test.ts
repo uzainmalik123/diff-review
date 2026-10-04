@@ -24,7 +24,7 @@ index 1..2 100644
 -hello
 +helloxxxxxx
 `;
-    const res = filterAndTruncate(diff, 20, []);
+    const res = filterAndTruncate(diff, 10, []);
     expect(res.includedText).toBeTruthy();
   });
 });
